@@ -1,0 +1,6 @@
+u 1280
+en0: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+	ether 28:cf:e9:1a:8a:2d
+	inet6 fe80::2acf:e9ff:fe1a:8a2d%en0 prefixlen 64 scopeid 0x5
+	inet 10.16.141.17 netmask 0xfffffc00 broadcast 10.16.143.255
+	media: 

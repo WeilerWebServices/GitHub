@@ -1,0 +1,5 @@
+ST> mtu 2304
+	ether 0a:cf:e9:1a:8a:2d
+	media: autoselect
+	status: inactive
+vmnet1: fla
