@@ -1,0 +1,15 @@
+# pack-refs with: peeled fully-peeled sorted 
+263b660e22f5f83a58ea0d008cb0d79a5cbc7659 refs/remotes/origin/add_fixups
+c5670739b4fdbf3ba230153fd2f504560fad4176 refs/remotes/origin/badge
+59a9e912b269f505469b3442c262525a05caf056 refs/remotes/origin/dependabot/npm_and_yarn/eslint-7.15.0
+81ec47713757ee4ffbf9982c0dda2ace49f3d498 refs/remotes/origin/dependabot/npm_and_yarn/eslint-plugin-jest-24.1.3
+472b555d379b070584f3d026a9a37a55de761142 refs/remotes/origin/dependabot/npm_and_yarn/jest-circus-26.6.3
+cf8f90e4dcefe670772c6479114772c52237a2db refs/remotes/origin/dependabot/npm_and_yarn/prettier-2.2.1
+685b2bbdc23f4871acef82ca3be7502a93054b18 refs/remotes/origin/dependabot/npm_and_yarn/typescript-4.1.2
+1c9a2b10f84224f1fcc70a2a61ee776adf80f1b7 refs/remotes/origin/hross-update-readme
+920cdc2c0e24a72317758ec13b4c2a9c6368085f refs/remotes/origin/hross-update-to-vercel
+5b0b32c68d8da10a0559289f2551c9e5108df7b6 refs/remotes/origin/hross/license_update
+e849b574f4e0b705c43b503509c07a5c606d8931 refs/remotes/origin/main
+9b3f3b36835c10b2a8a417f6f3d5037b1a1f65cd refs/remotes/origin/update-eslint
+5ee82fa2eeec0ede2cc365974bc0feb1a52099b4 refs/remotes/origin/update-prettier
+f720590593701c3376927513cecd7aff4e6ae4dc refs/remotes/origin/update-readme

@@ -1,0 +1,40 @@
+# pack-refs with: peeled fully-peeled sorted 
+ae3937cacb6b13c4acd43b99140b6432317e3b1b refs/remotes/origin/auth-test
+2f77de4b706cc76ac3333b2cec588fe152e23079 refs/remotes/origin/dependabot/npm_and_yarn/acorn-5.7.4
+2e64064c1d30524f971fc37466623fd7ea6c0df2 refs/remotes/origin/dependabot/npm_and_yarn/lodash-4.17.19
+d0f10a2b2cea9f30a4f2aebb05aeb8437bece58a refs/remotes/origin/dependabot/npm_and_yarn/node-fetch-2.6.1
+3fa75190be8e4f28c2a9ea169f09cc7cf8aec262 refs/remotes/origin/ethomson/update_description
+62fdfbb318a18fff15d7fc03b718ad6f19cdd2f0 refs/remotes/origin/ethomson/update_readme
+94d165561a4a16c052057a8265b8f20ad41946e3 refs/remotes/origin/hross-zeit-vercel
+27082cecf3ff7a1742dbd5e12605f0cb59dce2d9 refs/remotes/origin/main
+321b6ccb03083caa2ad22b27dc4b45335212e824 refs/remotes/origin/master
+e73ffbcdec6e32336d408b2ff7c61488032f3ec4 refs/remotes/origin/node-versions
+b6651e20e530d6e6b845a9828606779e89f5529c refs/remotes/origin/releases/v1
+56899e050abffc08c2b3b61f3ec6a79a9dc3223d refs/remotes/origin/servicing/v1
+efab84ad3c2bdbbe08bb56458149fb9ec6ae4a5e refs/remotes/origin/start-v2
+be4c7f772fdf3bb5ee34872bb7cbbaff44cf69a5 refs/remotes/origin/update-io
+1c0119c056919c9913db0d2c11e75e370a7e225c refs/remotes/origin/users/ericsciple/m262ghes_403
+6883e61d6db4e98416d25781e948c4f2ffb27e16 refs/tags/v1
+^56899e050abffc08c2b3b61f3ec6a79a9dc3223d
+0d7d2ca66539aca4af6c5102e29a33757e2c2d2c refs/tags/v1.0.0
+9580326150d2ee14fdc290ab1d7d5fa11e64f3e6 refs/tags/v1.0.1
+ea546c14bf2618d82e09407b899bcb32ed9ab992 refs/tags/v1.0.2
+401832ee6450765bf6640e4179c200c79deb4856 refs/tags/v1.0.3
+fc9ff49b90869a686df00e922af871c12215986a refs/tags/v1.0.4
+5273d0df9c603edc4284ac8402cf650b4f1f6686 refs/tags/v1.1.0
+dd2e8a486fdc1071872c594d5388fd6dce1a7534 refs/tags/v1.1.1
+8de2f9fcbc73a4ff49e2c9df61041a0f03f10914 refs/tags/v1.1.2
+c35dd24c52f85b8c80fd1619f6bc7b9e82c840db refs/tags/v1.2.0
+280ca3d133fb567e0329575ed7c5eac74034e25d refs/tags/v1.3.0
+^b6651e20e530d6e6b845a9828606779e89f5529c
+1c5c1375b3817ad821719597effe8e3d6f764930 refs/tags/v1.4.0
+83c9f7a7df54d6b57455f7c57ac414f2ae5fb8de refs/tags/v1.4.1
+44c9c187283081e4e88b54b0efad9e9d468165a4 refs/tags/v1.4.2
+4bb8c450539a93c2c5789587ecde80fc8c939605 refs/tags/v1.4.3
+56899e050abffc08c2b3b61f3ec6a79a9dc3223d refs/tags/v1.4.4
+c8aa67355f08dc1c22f1d30ecf52693f7ce18383 refs/tags/v2-beta
+^c6fd00ceb9747fb23ffdf72987450a2664414867
+e434342e4e324065b1b19b24586c710a1a68d2d7 refs/tags/v2.0.0
+1ae8f4b1fd89676f69b55d3dd6932b6df089ff7b refs/tags/v2.1.0
+321b6ccb03083caa2ad22b27dc4b45335212e824 refs/tags/v2.1.1
+c6fd00ceb9747fb23ffdf72987450a2664414867 refs/tags/v2.1.2

@@ -1,0 +1,12 @@
+# pack-refs with: peeled fully-peeled sorted 
+12c668fde43f8c9a7211533cd9076935d110243c refs/remotes/origin/dependabot/npm_and_yarn/actions/core-1.2.6
+0e87529770651111f9b999bb5e9409dee7b251d0 refs/remotes/origin/dependabot/npm_and_yarn/handlebars-4.7.6
+08bbf426b336ee8dba6bf9ecdb567b899f15fa32 refs/remotes/origin/dependabot/npm_and_yarn/node-fetch-2.6.1
+40c93f34620a4e092caea62d0de3e2bc0f647bc8 refs/remotes/origin/dependabot/npm_and_yarn/yargs-parser-13.1.2
+e9f0662bdf9868f4aac644f0eedc2b56567fdba8 refs/remotes/origin/main
+18b09fbb95da2ba68881b8469703051c929507ed refs/remotes/origin/master
+e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 refs/tags/latest
+e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 refs/tags/v1
+48c0418f0e48b7aaf6b7752feec35df6f212beaa refs/tags/v1.0.0
+64e5e85fc528f162d7ba7ce2d15a3bb67efb3d80 refs/tags/v1.0.1
+e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 refs/tags/v1.0.2

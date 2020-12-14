@@ -1,0 +1,15 @@
+# pack-refs with: peeled fully-peeled sorted 
+55b260a1f9c64a6f2f8b9fed00e385b94b8d81ce refs/remotes/origin/adrs
+4590175c8cc22891074f9ed00a926fd126041a74 refs/remotes/origin/audit
+cf9369225e90943d66589f08e319ae1fd42b71b6 refs/remotes/origin/dependabot/npm_and_yarn/actions/http-client-1.0.8
+5f29a1cd8dfebf420691c4c9a0e832e2fae5a526 refs/remotes/origin/main
+a6583f17b2d46e754048ebc5ba8770189095d3a4 refs/remotes/origin/master
+45ad9d579132a2d6fea666d3aa5debb56c2d16e1 refs/remotes/origin/prebuilt-adr
+b3d2478215b4b8ca4e9b276e7afa611ad204772f refs/tags/v1
+^5f29a1cd8dfebf420691c4c9a0e832e2fae5a526
+f5ab4efe19a4322b522c1f852091bf815d1c8c0a refs/tags/v1.0.0
+c6c44b217af18a8b984718464f19b86ac4d1b444 refs/tags/v1.0.1
+623660d1366330cb8f0b2a6243e9659429eaeed5 refs/tags/v1.0.2
+50f3cc9f0b0ab0fc1ed658c07aee4b1d61970143 refs/tags/v1.1.0
+18c61abf688e8efc9bec2bdb29c8bca07df5ff45 refs/tags/v1.1.1
+5f29a1cd8dfebf420691c4c9a0e832e2fae5a526 refs/tags/v1.1.2

@@ -1,0 +1,52 @@
+# add yourself to this list as a yaml
+# object with the following keys:
+# - name - string - your name
+# - alum - boolean - whether you no longer work on Actions
+humans:
+- name: Mona Lisa Octocat
+  honorary_human: true
+- name: "Matt Burke"
+  alum: true
+- name: "Angela Rivera"
+  alum: true
+- name: "Pete Wagner"
+  alum: true
+- name: "Parker Moore"
+  alum: true
+- name: "Melissa Xie"
+- name: "Jason Long"
+- name: "Iheanyi Ekechukwu"
+  alum: true
+- name: "Christopher Schleiden"
+- name: "Cameron Booth"
+- name: "Alberto Gimeno"
+- name: "Tim Ruffles"
+  alum: true
+- name: "Andrew Appleton"
+  alum: true
+- name: "Hayden Faulds"
+- name: "Anthony Sterling"
+- name: "Ajay Krishna Nalisetty"
+- name: "Jonathan Clem"
+- name: "Joris Abalea"
+- name: "Jean-Philippe André"
+- name: "Jeroen Rietveld"
+- name: "Julio Barba"
+- name: "Mike Coutermarsh"
+- name: "Thomas Brumley"
+- name: "Brian Cristante"
+- name: "Yang Cao"
+- name: "Yujin Shin"
+- name: "Bryan MacFarlane"
+- name: "Josh Gross"
+- name: "Guðmundur Bjarni Ólafsson"
+  alum: true
+- name: "Beth Brennan"
+- name: "PJ Quirk"
+- name: "Chad Kimes"
+- name: "Phani Raj"
+- name: "Konrad Pabjan"
+- name: "Adrian Mato Gondelle"
+- name: "Patrick Marsceill"
+- name: "Yaswanth Anantharaju"
+- name: "Ross Brodbeck"

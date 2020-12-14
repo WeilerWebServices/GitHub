@@ -1,0 +1,14 @@
+# pack-refs with: peeled fully-peeled sorted 
+039ed3a3781df8f5baebf8436ca31b654eb41782 refs/remotes/origin/413-http-code
+8921f0cb73938fa6f50c6195c45b674504a6c451 refs/remotes/origin/dependabot/npm_and_yarn/lodash-4.17.20
+a975c51e1da049d8809032d394f97d06324ec357 refs/remotes/origin/es2019
+a77f06ef459f0ee0e64e13f210a1596fcc51de2a refs/remotes/origin/fix-test-protocols
+c0e4c90f86bbaef8a1b7edbddf403b1777e0a85f refs/remotes/origin/format
+7f15359c45b81c7ba5e360de449ed0bf878839de refs/remotes/origin/joshmgross/code-review
+98274269847404630d89d68c018798eefeb32ed7 refs/remotes/origin/jsonapis
+edadda14b09058389cd47f9790e19b97883624c1 refs/remotes/origin/main
+5f61f72a73224ee5541c6961f864e09e9f4cf6d7 refs/remotes/origin/master
+7295685073e6780eb3f676ac376a8d5fa5227912 refs/remotes/origin/prettier
+cde0b32926ae7938c148121d11271f4cb1f5a57f refs/remotes/origin/redirect-auth-issue
+647e77eb6080da8903ab205afa490f53adb1b871 refs/remotes/origin/update-default-branch
+83394945b7517e32a69724388ee3cfc119a22d10 refs/remotes/origin/workflow

@@ -1,0 +1,5 @@
+# pack-refs with: peeled fully-peeled sorted 
+625c51e0d671b45f57c0f939ea120214c8de87b1 refs/remotes/origin/dependabot/npm_and_yarn/js-yaml-3.13.1
+8436f278d078afda032acdb40c7dcd6414fa186a refs/remotes/origin/master
+187d5cb76c9626111b236c58ae7690bb9baf922f refs/remotes/origin/readme-checkout
+4f0213ed102c4b518a7ce8bc4e6268bdd710770e refs/tags/v1.0.0

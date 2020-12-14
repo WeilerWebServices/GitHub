@@ -1,0 +1,17 @@
+# pack-refs with: peeled fully-peeled sorted 
+e53ea0147d16545029e02562921ba6656c741c02 refs/remotes/origin/add-in-contributing
+6f203409c5ffc42ec4bce4791a14524b1cc6fee7 refs/remotes/origin/andymckay-patch-1
+6179f79b78228ecff85585184654ef97a5edae8d refs/remotes/origin/cschleiden/experiment
+03566f31ab5cea9a27548a383079b09d278f3d5b refs/remotes/origin/ethomson/typescript
+2943b3eb508fbd14acf1c4da206b5ce8676ca6b1 refs/remotes/origin/ghes
+ce22ce3ec77e88c84366e9845818cf23915d557e refs/remotes/origin/h10s-no-google-master
+3cd5fe49e61bbfa7a4b0fa3fea2984c0e46306c0 refs/remotes/origin/h10s-no-master
+6898b6646097add33caacd7a380545dd1857226f refs/remotes/origin/labeler-trigger
+a571f2981ab5a22dfd9158f20646c2358db3654c refs/remotes/origin/main
+ac48a9cafdce0b9c3eacdb558f3e2742e0fc7d6a refs/remotes/origin/manual-add-icon
+c088288539da94c25faff8cf4f0f207a4a465ad9 refs/remotes/origin/master
+9f4700e8a52549f3e81e7c0c2be3e1fabd7ac96c refs/remotes/origin/mscoutermarsh-patch-1
+713e3be504c947026457a5b8690a1137557e8ba6 refs/remotes/origin/mscoutermarsh-patch-2
+b52ecb77123d3b51eff84f39e1d261c7b85c79f4 refs/remotes/origin/nickfyson/add-shiftleft-code-scanning
+0c4edf446c098dcfc4ec5a6a7dc8301a439c465e refs/remotes/origin/npm-ci
+193749b5aa56617678557b9a73e1538bacd76fc1 refs/remotes/origin/phoenix

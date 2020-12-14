@@ -1,0 +1,37 @@
+# pack-refs with: peeled fully-peeled sorted 
+c8d75a8073ed6011e749c71d6d36ad091c71151b refs/remotes/origin/add-retries
+61a56b7c7b3f5991c90968f922f55fb7ac2c433c refs/remotes/origin/aiqiaoy/path
+f8d592f91f9cdc79b8fbdd2991bdb678f1ce0602 refs/remotes/origin/dhadka/bump-cache
+d59a1464f2d981ca686dc10c47b3759c86c337d7 refs/remotes/origin/dhadka/cache-1.0.1
+aa08592228364a34aacf1c604f905e266499ccd0 refs/remotes/origin/dhadka/exit-after-run
+345e0e411a8cf665274d9763e60711269fed0f0d refs/remotes/origin/dhadka/update-cache-module
+79f581f4b2007f6d0f08918fc5485b8a76a08751 refs/remotes/origin/dhadka/update-core
+68cfb2ccb73b1982be3fa55e3d7c842697d7f1ed refs/remotes/origin/dhadka/upload-chunk-size
+d60d2bef100d89065bfe43a25f6250d3b4365317 refs/remotes/origin/improve-string-split
+cdec5dec0db8456760a3d6b1a5d6f7c34f1f7fdd refs/remotes/origin/joshmgross/chunked-upload-testing
+7527073910621fae79488a74cee19f2e1c43b2af refs/remotes/origin/joshmgross/sudo-tar
+b767a42249bf866ac4a52255b097ad713080e27c refs/remotes/origin/joshmgross/windows-bsd-tar-release
+a3047dcdce21ccf98c7fc6386203b888826802fb refs/remotes/origin/main
+eed9cfe64d00dd64cbb36bec915d41dd6fab9f6c refs/remotes/origin/master
+0da99ad140d4e8eb671003569d4e357fa825ff44 refs/remotes/origin/preview
+d9747005de0f7240e5d35a68dca96b3f41b8b340 refs/remotes/origin/releases/v1
+b8204782bbb5f872091ecc5eb9cb7d004e35b1fa refs/remotes/origin/releases/v2
+18e62e1fe0e25b537775120e937f054a4db1f903 refs/remotes/origin/timeout-env-var
+e7ad80454a6127bc11c0f89f007eff9fecd8c4f7 refs/tags/v0.0.1
+0da99ad140d4e8eb671003569d4e357fa825ff44 refs/tags/v0.0.2
+99d99cd262b87f5f8671407a1e5c1ddfa36ad5ba refs/tags/v1
+^70655ec8323daeeaa7ef06d7c56e1b9191396cbe
+9d8c7b4041799ff4995821122f3c4ce8934a36b7 refs/tags/v1.0.0
+86dff562ab522d4b40945cd4cd51c5d4b4b40cbc refs/tags/v1.0.1
+44543250bd1b1d68b70b6e9949c2a11f5b11d990 refs/tags/v1.0.2
+cffae9552bb9f84b9812c1ee9ea2e3c0a70a797e refs/tags/v1.0.3
+a505c2e7a6652a1d5727baf1c2dc5a5b2d1ecc60 refs/tags/v1.1.0
+fe1055e9d167ff6b0247ec54ca5851b2701fe95c refs/tags/v1.1.1
+70655ec8323daeeaa7ef06d7c56e1b9191396cbe refs/tags/v1.1.2
+d9747005de0f7240e5d35a68dca96b3f41b8b340 refs/tags/v1.2.0
+0781355a23dac32fd3bac414512f4b903437991a refs/tags/v2
+b8204782bbb5f872091ecc5eb9cb7d004e35b1fa refs/tags/v2.0.0
+d29c1df198dd38ac88e0ae23a2881b99c2d20e68 refs/tags/v2.1.0
+5ca27f25cb3a0babe750cad7e4fddd3e55f29e9a refs/tags/v2.1.1
+d1255ad9362389eac595a9ae406b8e8cb3331f16 refs/tags/v2.1.2
+0781355a23dac32fd3bac414512f4b903437991a refs/tags/v2.1.3

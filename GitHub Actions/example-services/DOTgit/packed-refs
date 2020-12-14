@@ -1,0 +1,7 @@
+# pack-refs with: peeled fully-peeled sorted 
+df1c86e7bce9b51c290af5faca5e190708fa3b05 refs/remotes/origin/chrispat-patch-1
+46cbec57c0099e026653dc7f6e35aa175f73efe5 refs/remotes/origin/dependabot/npm_and_yarn/mongodb/bl-2.2.1
+989ef69ed164330bee413f11ce9332d76f943af7 refs/remotes/origin/main
+7ae0b005cc273e2000e12ccf54f01e796c22b3e4 refs/remotes/origin/master
+7d29c7ae788d8d735d89d4be2f83c4caa181e1c5 refs/remotes/origin/redis-server
+30306ecb1da5dfd5e10c1066c7852f334790dd86 refs/remotes/origin/use-new-default-branch
