@@ -1,0 +1,109 @@
+#!/bin/bash
+#
+# Clone an rtos into a workspace
+#
+
+# Set usage output
+USAGE="[-h |--help] [-a | --all-rtos] [-p | --patch] <rtos> [<rtos> ...]"
+LONGUSAGE="\t-h, --help\n\t\tPrint this help message
+\t-a, --all-rtos\n\t\t Get all rtos versions
+\t-p, --patch\n\t\t Patch with GATT patch
+\t<rtos>\n\t\tRTOS version"
+
+# Standard functions
+GTWS_LOC=$(readlink -f $(dirname "$0"))
+source ${GTWS_LOC}/gtws.sh
+
+# Workspace settings
+if [ ! -f ".gtwsrc" ]; then
+	die "${PWD} is not a workspace"
+fi
+source ".gtwsrc"
+GTWS_WSPATH="${PWD}"
+GTWS_ORIGIN="${GTWS_ORIGIN:-${HOME}/origin}"
+
+# Script name
+ME=$(basename $0)
+
+# Parse arguments
+ARGS=`getopt -o hap --long help,all,patch: -n "${ME}" -- "$@"`
+
+if [ $? != 0 ] ; then
+	usage 
+fi
+eval set -- "$ARGS"
+
+while true ; do
+	case "$1" in
+		-h|--help) usage; shift ;;
+		-a|--all-rtos) ALL="yes"; shift ;;
+		-p|--patch) PATCH="yes"; shift ;;
+		--) shift ; break ;;
+		* ) usage "Invalid argument $1";;
+	esac
+done
+
+# Remaining arguments are in $1, $2, etc. as normal
+
+if [ -n "${1}" ]; then
+	RTOS=${@}
+fi
+
+if [ -n "${ALL}" ]; then
+	cd "${GTWS_ORIGIN}"
+	RTOS=$(/bin/ls -d i*)
+fi
+
+if [ -z "${RTOS}" ]; then
+	usage "Must give an rtos version"
+fi
+
+cd "${GTWS_WSPATH}"
+
+for i in ${RTOS}; do
+	if [ ! -d "${GTWS_ORIGIN}/${i}" ]; then
+		die "No origin for ${i}"
+	fi
+	echo "cloning $i"
+	git clone "${GTWS_ORIGIN}/${i}" || die "failed to clone ${i}"
+	cp "${GTWS_ORIGIN}/${i}/.git/info/exclude" "${i}/.git/info/" || die "failed to copy exclude"
+	for f in ${GTWS_EXTRA_FILES}; do
+		if [ -f "${GTWS_ORIGIN}/${i}/${f}" ]; then
+			cp "${GTWS_ORIGIN}/${i}/${f}" "${i}/" || die "failed to copy ${f}"
+		fi
+	done
+	# Detect directory
+	if [ -d "${GTWS_WSPATH}/${i}/rtos/pcx86" ]; then
+		RDIR="${GTWS_WSPATH}/${i}/rtos"
+		# Can't patch this type
+		unset PATCH
+	elif [ -d "${GTWS_WSPATH}/${i}/pcx86" ]; then
+		RDIR="${GTWS_WSPATH}/${i}"
+	else
+		die "Cannot find target dir in ${GTWS_WSPATH}/${i}"
+	fi
+	if [ -n "${PATCH}" ]; then
+		if [ -d "${GTWS_WSPATH}/gatt/patches/${i}" ]; then
+			echo "Applying GATT patch"
+			cd "${RDIR}" || die "failed to cd to ${RDIR}"
+			git am --whitespace=nowarn "${GTWS_WSPATH}/gatt/patches/${i}/"*.patch || die "git am failed"
+		else
+			echo "No patches for ${i}; skipping"
+		fi
+	fi
+	echo "Creating makefile"
+	set_default_comp "${i}"
+	set_default_bsp "${i}"
+	cp "${GTWS_LOC}/Makefile" "${RDIR}" || die "Couldn't copy Makefile"
+	sed -i "s#@GTWSGBUILD@#${GTWS_COMPILER_PATH}/gbuild#" "${RDIR}/Makefile" || die "gbuild sed failed"
+	sed -i "s#@GTWSBSP@#${GTWS_BSP}#" "${RDIR}/Makefile" || die "bsp sed failed"
+	sed -i "s#@GTWSRDIR@#${RDIR}#" "${RDIR}/Makefile" || die "rdir sed failed"
+	echo "Setting up $i"
+	cd "${RDIR}/modules/ghs" || die "failed to cd to ${RDIR}/modules/ghs"
+	ln -s "${GTWS_WSPATH}/routing" "gated" || die "failed to symlink gated"
+	cd "${RDIR}" || die "failed to cd to ${RDIR}"
+	./setup > /dev/null 2>&1
+	cd "${GTWS_WSPATH}"
+	echo ""
+done
+

@@ -1,0 +1,160 @@
+#!/bin/bash
+#
+# Create a new Project development workspace
+#
+
+function GTWScleanup {
+	if [ -n "${MKWS_CLEANUP}" ]; then
+		rm -rf "${GTWS_WSPATH}"
+	fi
+}
+
+# Standard functions
+GTWS_LOC=$(readlink -f $(dirname "$0"))
+source ${GTWS_LOC}/gtws.sh
+
+if [ -f "${PWD}/.gtwsrc" ]; then
+	load_rc "${PWD}"
+else
+	source "${HOME}/.gtwsrc"
+fi
+
+if [ -n "${GTWS_PROJECT_VERSION}" ]; then
+	VERSION="${GTWS_PROJECT_VERSION}"
+elif [ -n "${GTWS_DEFAULT_PROJECT_VERSION}" ]; then
+	VERSION="${GTWS_DEFAULT_PROJECT_VERSION}"
+else
+	VERSION=$(basename "$PWD");
+fi
+
+if [ -n "${GTWS_PROJECT}" ]; then
+	PROJECT="${GTWS_PROJECT}"
+elif [ -n "${GTWS_DEFAULT_PROJECT}" ]; then
+	PROJECT="${GTWS_DEFAULT_PROJECT}"
+else
+	PROJECT=$(basename $(dirname "$PWD"));
+fi
+
+# Set usage output
+DESCRIPTION="Create a new development workspace"
+USAGE="[-h |--help] [-s <submodule-base> | --submodule-base=<submodule-base>] [-p <project> | --project=<project>] [-v <version> | --version=<version>] [-V | --verbose] <name>"
+LONGUSAGE="\t-h, --help\n\t\tPrint this help message
+\t-s <submodule-base>, --submodule-base=<submodule-base>\n\t\tBase dir for submodules (default: project origin)
+\t-p <project>, --project=<project>\n\t\tProject (default: ${PROJECT:-none})
+\t-v <version>, --version=<version>\n\t\tProject version (default: ${VERSION})
+\t-V, --verbose\n\t\tBe verbose
+\t<name>\n\t\tWorkspace name"
+
+# Script name
+ME=$(basename $0)
+
+# Parse arguments
+ARGS=`getopt -o hVs:p:v: --long help,verbose,submodule-base:,project:,version: -n "${ME}" -- "$@"`
+
+if [ $? != 0 ] ; then
+	usage 
+fi
+eval set -- "$ARGS"
+
+while true ; do
+	case "$1" in
+		-h|--help) usage; shift ;;
+		-s|--submodule-base) SUBMODULE_BASE=$2 ; shift 2 ;;
+		-p|--project) PROJECT=$2 ; shift 2 ;;
+		-v|--version) VERSION=$2 ; shift 2 ;;
+		-V|--verbose) export GTWS_VERBOSE=yes; shift ;;
+		--) shift ; break ;;
+		* ) usage "Invalid argument $1";;
+	esac
+done
+
+is_gtws && usage "Cannot create workspace in an existing workspace"
+
+# Remaining arguments are in $1, $2, etc. as normal
+if [ -z "${1}" ]; then
+	usage "Must give a workspace name"
+fi
+
+if [ -z "${PROJECT}" ]; then
+	usage "Must give a project"
+fi
+
+if [ -z "${GTWS_PROJECT}" ]; then
+	# We weren't in a project directory; go there
+	BASE="${GTWS_BASE_SRCDIR:-${HOME}/src}/${PROJECT}/${VERSION}"
+	cd "${BASE}" || die "Couldn't cd to project dir ${BASE}"
+elif [ "${PROJECT}" != "${GTWS_PROJECT}" ]; then
+	die "In wrong project dir: expected ${PROJECT} got ${GTWS_PROJECT}"
+fi
+
+GTWS_WSPATH=$(readlink -f "${1}")
+GTWS_WSNAME=$(basename "${GTWS_WSPATH}")
+
+# Target directory check
+if [ -d "${GTWS_WSPATH}" ]; then
+	die "Workspace ${GTWS_WSPATH} already exists"
+fi
+
+# From here on out, clean up on failure
+MKWS_CLEANUP="yes"
+
+# Set up the environment
+mkdir -p "${GTWS_WSPATH}" || die "Failed to mkdir ${GTWS_WSPATH}"
+cd "${GTWS_WSPATH}"
+cp "${GTWS_LOC}"/gtwsrc "${GTWS_WSPATH}"/.gtwsrc
+source "${GTWS_WSPATH}"/.gtwsrc
+
+# Origin
+O="${GTWS_ORIGIN:=${HOME}/origin}"
+
+if [ -z "${SUBMODULE_BASE}" ]; then
+	gtws_smopvn "${GTWS_SUBMODULE_ORIGIN:-${O}}" "${PROJECT}" "${VERSION}" "${GTWS_WSNAME}" SUBMODULE_BASE || die "Could not get SUBMODULE_BASE"
+fi
+
+HAS_CLONE=$(declare -F | grep "\<gtws_project_clone\>")
+if [ -z "${HAS_CLONE}" ]; then
+	gtws_opvn "${O}" "${PROJECT}" "${VERSION}" "${GTWS_WSNAME}" opv
+
+	# Workspace contents check
+	repos=${GTWS_PROJECT_REPOS}
+	if [ -z "${repos}" ]; then
+		for i in "${opv}"/*; do
+			if is_git_repo "$i"; then
+				repos="$(basename $i) $repos"
+			fi
+		done
+	fi
+	for repo in ${repos}; do
+		rpath="${opv}/${repo}"
+		if ! is_git_repo "$rpath"; then
+			rpath="${opv}/${repo}.git"
+			if ! is_git_repo "$rpath"; then
+				die "${rpath} in origin ${opv} is not git"
+			fi
+		fi
+	done
+
+	if [ -z "${repos}" ]; then
+		die "No git repos in origin ${O}/${PROJECT}/${VERSION}"
+	fi
+	export GTWS_PROJECT_REPOS=${repos}
+	debug_print "new repos ${GTWS_PROJECT_REPOS}"
+fi
+
+# Make workspace
+echo "Making workspace for ${VERSION}:${TARGET} in ${GTWS_WSPATH}"
+# Made directory above
+
+touch "${GTWS_WSPATH}/.sdirs"
+
+if [ -n "${HAS_CLONE}" ]; then
+	# Project provided a clone
+	gtws_project_clone "${O}" "${PROJECT}" "${VERSION}" "${GTWS_WSNAME}" "${SUBMODULE_BASE}" || die "clone failed"
+else
+	# Default clone
+	gtws_project_clone_default "${O}" "${PROJECT}" "${VERSION}" "${GTWS_WSNAME}" "${SUBMODULE_BASE}" || die "clone failed"
+fi
+
+gtws_project_setup "${GTWS_WSNAME}" "${O}" "${PROJECT}" "${VERSION}" || die "setup failed"
+
+echo "Done"

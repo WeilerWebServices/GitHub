@@ -1,0 +1,67 @@
+#!/bin/bash
+#
+# Script that exports a git repo
+#
+
+TREEISH="HEAD"
+# Set usage output
+DESCRIPTION="Export a git repo to a clean directory"
+USAGE="[-h |--help] [-b <branch> | --branch=<branch>] [-f | --force] [-t | --tgz] <destination>"
+LONGUSAGE="Common options:
+\t-h, --help\n\t\tPrint this help message
+\t-b <branch>, --branch=<branch>\n\t\tOperate on given branch rather than HEAD
+\t-f, --force\n\t\tForce operation, even target exists
+\t-t, --tgz\n\t\tMake a tarball <destination>.tgz instead of extracting to a directory
+<destination>\n\t\tDestination directory for export
+"
+# Standard functions
+GTWS_LOC=$(readlink -f $(dirname "$0"))
+source ${GTWS_LOC}/gtws.sh
+
+# Script name
+ME=$(basename $0)
+
+# Parse arguments
+ARGS=`getopt -o hft --long help,all,force,tgz -n "${ME}" -- "$@"`
+
+if [ $? != 0 ] ; then
+	usage "invalid arguments"
+fi
+eval set -- "$ARGS"
+
+while true ; do
+	case "$1" in
+		-h|--help) usage; shift ;;
+		-f|--force) FORCE="yes"; shift ;;
+		-t|--tgz) TGZ=".tgz"; shift ;;
+		--) shift ; break ;;
+		* ) usage "Invalid argument $1";;
+	esac
+done
+
+# Remaining arguments are in $1, $2, etc. as normal
+if [ $# -ne 1 ]; then 
+	usage "You can only export to a single destination"
+fi
+DEST=${1}${TGZ}
+
+if [ -e "${DEST}" ]; then
+	if [ -z "${FORCE}" ]; then
+		usage "Destination ${DEST} exists"
+	fi
+
+	rm -rf "${DEST}"
+fi
+
+SUBDIRECTORY_OK=Yes
+GITPATH="$(git --exec-path)"
+source "${GITPATH}/git-sh-setup"
+cd_to_toplevel
+if [ -z "${TGZ}" ]; then
+	echo "Exporting git repository to ${DEST}"
+	"${GITPATH}/git-checkout-index" -a --prefix=${DEST}/
+else
+	BASE=$(basename "${DEST}" "${TGZ}")
+	echo "Exporting git repository to ${DEST}"
+	git archive --format tgz --prefix "${BASE}/" "${TREEISH}" > "${DEST}"
+fi

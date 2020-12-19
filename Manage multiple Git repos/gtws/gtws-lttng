@@ -1,0 +1,110 @@
+#!/bin/bash
+#
+# Run a program under LTTng and (optionally) ASAN
+#
+
+# Catch ctrl-c and clean up our LTTng session
+trap GTWScleanup INT
+
+CLEANED_UP=
+function GTWScleanup {
+	if [ -z "${CLEANED_UP}" ]; then
+		lttng stop
+		lttng destroy
+		CLEANED_UP="yes"
+	fi
+}
+
+# Standard functions
+GTWS_LOC=$(readlink -f $(dirname "$0"))
+source ${GTWS_LOC}/gtws.sh
+GDB="cgdb"
+ASAN=
+ASAN_GDB=
+BUFFSIZE="128k"
+CHANNAME="channel0"
+
+# Set usage output
+DESCRIPTION="Run a workspace program under LTTng"
+USAGE="[-h |--help] [-a |--asan] [-b <buffsize> | --buffsize=<buffsize>] [-d | --debug ] [-e <event> | --event=<event>]  [-g | --gdb ][-p <preload> | --preload=<preload>] [-s <session> | --session=<session>] <program> [arguments]"
+LONGUSAGE="\t-h, --help\n\t\tPrint this help message
+\t-a, --asan\n\t\tRun under address sanatizer
+\t-b <buffsize>, --buffsize=<buffsize>\n\t\tSize of LTTng buffers. Default: 128k
+\t-d, --debug\n\t\tRun under debugger
+\t-e <event>, --event=<event>\n\t\tEvents to enable. May be given multiple times. Default: *
+\t-g, --gdb\n\t\tUse gdb instead of cgdb
+\t-n, --no-events\n\t\tDo not enable any events
+\t-p <preload>, --preload=<preload>\n\t\tLibrary to preload. Default: none
+\t-s <session>, --session=<session>\n\t\tSet name of LTTng session.  Default: <program>
+\t-V, --verbose\n\t\tBe verbose
+\t<program>\n\t\tProgram to run
+\t[arguments]\n\t\tArguments to program"
+
+# Script name
+ME=$(basename $0)
+
+# Parse arguments
+ARGS=`getopt -o hVab:dgne:p:s: --long help,verbose,asan,buffsize:,debug,gdb,no-events,event:,preload:,session: -n "${ME}" -- "$@"`
+
+if [ $? != 0 ] ; then
+	usage 
+fi
+eval set -- "$ARGS"
+
+while true ; do
+	case "$1" in
+		-h|--help) usage; shift ;;
+		-b|--buffsize) BUFFSIZE=$2 ; shift 2 ;;
+		-a|--asan) ASAN="gtws-asan"; shift ;;
+		-d|--debug) DEBUG="--debug"; shift ;;
+		-e|--event) EVENTS+=("$2") ; shift 2 ;;
+		-g|--gdb) GDB=gdb; ASAN_GDB="-g" shift ;;
+		-n|--no-events) NOEVENTS="yes"; shift ;;
+		-p|--preload) PRELOAD=$2 ; shift 2 ;;
+		-s|--session) SESSION=$2 ; shift 2 ;;
+		-V|--verbose) export GTWS_VERBOSE=yes; shift ;;
+		--) shift ; break ;;
+		* ) usage "Invalid argument $1";;
+	esac
+done
+
+is_gtws || usage "Must be run inside a workspace"
+
+# Remaining arguments are in $1, $2, etc. as normal
+if [ -z "${1}" ]; then
+	usage "Must give a program"
+fi
+PROG="${1}"
+shift
+
+if [ -z "${SESSION}" ]; then
+	SESSION="${PROG}"
+fi
+
+if [ -z "${NOEVENTS}" ]; then
+	if [ -z "${EVENTS}" ]; then
+		EVENTS="*"
+	fi
+fi
+
+lttng create "${SESSION}"
+lttng enable-channel -u --session="${SESSION}" --subbuf-size="${BUFFSIZE}" "${CHANNAME}"
+lttng add-context -u -t pthread_id -t vtid
+for event in "${EVENTS[@]}"; do
+	lttng enable-event --channel="${CHANNAME}" -u "${event}"
+done
+lttng start
+
+if [ -n "${ASAN}" ]; then
+	${ASAN} ${DEBUG} ${ASAN_GDB} -p "${PRELOAD}" ${PROG} -- "${@}"
+elif [ -n "${DEBUG}" ]; then
+	cmdbase=$(basename ${PROG});
+	pid=$(pgrep "${cmdbase}");
+	LD_PRELOAD=${PRELOAD} ${GDB} ${PROG} ${pid}
+else
+	LD_PRELOAD=${PRELOAD} ${PROG} "${@}"
+	echo "Done"
+fi
+
+
+GTWScleanup 

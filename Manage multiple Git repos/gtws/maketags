@@ -1,0 +1,165 @@
+#!/bin/bash
+#
+# Recursively make tags file for all c, cpp, C, c++, h files
+#
+
+SAVEFILE="./.maketagssave"
+# Things to always skip
+BASESKIPRE=".svn|\<tags\>|.git|cscope|.swp\>|.maketag"
+# Default args for ctags
+CTAGS_ARGS="--extras=q"
+
+function GTWScleanup {
+	rm -rf "${GTWS_WSPATH}"
+}
+
+# Standard functions
+GTWS_LOC=$(readlink -f $(dirname "$0"))
+source ${GTWS_LOC}/gtws.sh
+
+# Set usage output
+DESCRIPTION="Make ctags/cscope for a source tree"
+USAGE="[-h |--help] [-r | --repeat] [-n | --no-repeat] [-e | --empty] [-k | --kernel] [-c | --cpp] [-p | --perl | --python] [-j | --java] [<directory> [<directory>...]]"
+LONGUSAGE="\t-h, --help\n\t\tPrint this help message
+\t-r, --repeat\n\t\tBuild the same tags as last time (defalut)
+\t-n, --no-repeat\n\t\tIgnore saved tag set and only use command line
+\t-e, --empty\n\t\tIgnore .maketagsrc and .gtwsrc files
+\t-k, --kernel\n\t\tBuild kernel tags (no system includes)
+\t-c, --cpp\n\t\tBuild C/C++ tags
+\t-p, --perl, --python\n\t\tBuild Perl and Python tags
+\t-j, --java\n\t\tBuild Java tags
+\t<directory>\n\t\tBuild tags for directory.  Defaults to '.'"
+
+# Script name
+ME=$(basename $0)
+
+# Parse arguments
+ARGS=`getopt -o hrnekcpj --long help,repeat,no-repeat,empty,kernel,cpp,perl,python,java -n "${ME}" -- "$@"`
+
+if [ $? != 0 ] ; then
+	usage
+fi
+eval set -- "$ARGS"
+
+while true ; do
+	case "$1" in
+		-h|--help) usage; shift ;;
+		-r|--repeat) shift ;;
+		-n|--no-repeat) NOREPEAT="yes" ; shift ;;
+		-e|--empty) EMPTY="yes" ; shift ;;
+		-k|--kernel) KERNEL="-k" ; shift ;;
+		-c|--cpp) CPP="yes" ; NOREPEAT="yes"; shift ;;
+		-p|--perl|--python) PERL="yes" ; NOREPEAT="yes"; shift ;;
+		-j|--java) JAVA="yes" ; NOREPEAT="yes"; shift ;;
+		--) shift ; break ;;
+		* ) usage "Invalid argument $1";;
+	esac
+done
+
+# Remaining arguments are in $1, $2, etc. as normal
+if [ -z "$1" ]; then
+	DIRS="."
+else
+	DIRS="$@"
+fi
+
+# Get stuff from the .maketagsrc file
+# This can contain:
+# KERNEL_HDRS	- Location of headers for a kernel build.  Only these headers will be scanned
+# SYSTEM_HDRS	- Location of headers for a normal build.  These will be scanned in addition to /usr/include
+# SKIPRE	- A regular expression of files to skip
+#
+# Order of precidence from least to most, with later overriding, is:
+#   - ~/.maketagsrc
+#   - ~/.gtwsrc
+#   - ./.maketagsrc
+#   - ./.gtwsrc  (this loads the full GTWS environment)
+if [ -z "${EMPTY}" ]; then
+	if [ -f "${HOME}/.maketagsrc" ]; then
+		source ${HOME}/.maketagsrc
+	fi
+	if [ -f ".maketagsrc" ]; then
+		source .maketagsrc
+	fi
+	if [ -f "${PWD}/.gtwsrc" ]; then
+		load_rc "${PWD}"
+	elif [ -f "${HOME}/.gtwsrc" ]; then
+		source "${HOME}/.gtwsrc"
+	fi
+fi
+
+if [ -z "${NOREPEAT}" ]; then
+	echo "repeat"
+	# Override command line options with saved versions
+	if [ -f "${SAVEFILE}" ]; then
+		source "${SAVEFILE}"
+	fi
+fi
+
+# Save for next time
+echo "KERNEL=\"${KERNEL}\"" > "${SAVEFILE}"
+echo "CPP=\"${CPP}\"" >> "${SAVEFILE}"
+echo "PERL=\"${PERL}\"" >> "${SAVEFILE}"
+echo "JAVA=\"${JAVA}\"" >> "${SAVEFILE}"
+echo "DIRS=\"${DIRS}\"" >> "${SAVEFILE}"
+
+if [ -n "${CPP}" ]; then
+	FTYPE="${FTYPE} C/C++,"
+fi
+if [ -n "${PERL}" ]; then
+	FTYPE="${FTYPE} Perl/Python,"
+fi
+if [ -n "${JAVA}" ]; then
+	FTYPE="${FTYPE} Java,"
+fi
+if [ -z "${FTYPE}" ]; then
+	FTYPE=" Full"
+	FULL="yes"
+fi
+
+if [ -n "${KERNEL}" ]; then
+	TYPE=" kernel${FTYPE}"
+	HDRS="${KERNEL_HDRS}"
+else
+	TYPE="${FTYPE}"
+	HDRS="${SYSTEM_HDRS}"
+fi
+
+echo "Making${TYPE} tags for ${DIRS}"
+
+TMPFILE=`mktemp -t maketags.XXXXXXXXXX` || die "Couldn't make tempfile"
+
+if [ -n "${CPP}" ]; then
+	if [ -n "${HDRS}" ]; then
+		find ${HDRS} -type f -and \( -name "*.h++" -or -name "*.hxx" -or -name "*.hh" -or -name "*.hpp" -or -name "*.H" -or -name "*.h" \) >> ${TMPFILE}
+	fi
+	find ${DIRS} ${EXTRA_DIRS} -type f -and \( -name "*.c" -or -name "*.cpp" -or -name "*.cxx" -or -name "*.h++" -or -name "*.hxx" -or -name "*.hh" -or -name "*.hpp" -or -name "*.H" -or -name "*.C" -or -name "*.c++" -or -name "*.cc" -or -name "*.h" \) >> ${TMPFILE}
+	SUBSET="yes"
+fi
+if [ -n "${PERL}" ]; then
+	find ${DIRS} -type f -and \( -name "*.pl" -or -name "*.pm" -or -name "*.perl"  -or -name "*.py" \) >> ${TMPFILE}
+	SUBSET="yes"
+fi
+if [ -n "${JAVA}" ]; then
+	find ${DIRS} -type f -and \( -name "*.java" \) >> ${TMPFILE}
+	SUBSET="yes"
+fi
+if [ -n "${FULL}" ]; then
+	find ${DIRS} -type f >> ${TMPFILE}
+fi
+
+if [ -n "${SKIPRE}" ]; then
+	egrep -v "${SKIPRE}" ${TMPFILE} | egrep -v "${BASESKIPRE}" > cscope.files
+	SUBSET="yes"
+else
+	egrep -v "${BASESKIPRE}" ${TMPFILE} > cscope.files
+fi
+rm ${TMPFILE}
+cscope -q -L ${KERNEL} -i cscope.files
+if [ -n "${SUBSET}" ]; then
+	# We're only using a subset of files; use files in the list
+	ctags ${CTAGS_ARGS} -L- < cscope.files
+else
+	# Tag everything, so that we get languages other than C/C++
+	ctags ${CTAGS_ARGS} -R
+fi

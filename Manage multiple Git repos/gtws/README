@@ -1,0 +1,180 @@
+Great Teeming Workspaces
+
+This handles workspaces for multiple versions of multiple projects.  You can
+create, update, enter and leave workspaces easily, and each <project, version>
+combo has at most one local origin that syncs to and from upstream.  All other
+workspaces update from the local origin.
+
+Layout is as follows:
+
+${GTWS_ORIGIN}/<project>/<repo>[/<version>]
+${GTWS_BASE_SRCDIR}/<project>/<version>/<workspacename>/{<repo>[,<repo>...]}
+
+Each level in the source tree (plus the homedir for globals) can have a .gtwsrc
+file in it that maintains settings and bash code relevant to that level.  Each
+more specific level overrides higher levels.
+
+- Setup Overview
+	- Checkout gtws
+		git clone https://github.com/dang/gtws.git
+		- The location of gtws is called GTWS_LOC
+	- Set up your ${HOME}/.gtwsrc
+		- Should include GTWS_ORIGIN, optionally GTWS_SETPROMPT
+	- Add the repo directory to your path
+		export PATH="${PATH}:/path/to/gtws
+	- Profit
+
+- Configuration
+	Configuration is via cascading .gtwsrc files.  The real path down from
+	the root is walked, and each .gtwsrc file found is sourced in turn.
+	More specific files override less specific ones.  There are sample
+	versions of all the .gtwsrc files in ${GTWS_LOC}/examples
+
+	These settings should be in your top level ~/.gtws/.gtwsrc:
+
+	- GTWS_BASE_SRCDIR
+		- This is the base of all the projects source trees.  Defaults to $HOME/src
+	- GTWS_ORIGIN
+		- This sets the location of the origin git trees.  Defaults to $HOME/origin
+	- GTWS_SETPROMPT
+		- This is optional.  If set, the shell prompt will be changed
+		  to have the workspace name in it.
+	- GTWS_DEFAULT_PROJECT
+		- This is the project used when no project is given or known.
+		  If this is not given, projects must be specified on the
+		  command line.
+	- GTWS_DEFAULT_PROJECT_VERSION
+		- Default version to check out.  Defaults to "master"
+
+	These settings should be at the project level of each project:
+
+	- GTWS_PROJECT
+		- Name (and base directory) of the project in question.
+	- gtws_project_clone
+		- This is a function used to clone a specific version if a
+		  project.  If it is not defined, then it is assumed that the
+		  origin for the project contains a single directory per
+		  version, and that contains a set of git repo to clone.
+	- gtws_project_setup
+		- This optional function is called after all cloning is done,
+		  and allows any addidional setup necessary for the project,
+		  such as setting up workspaces in an IDE.
+
+	These settings should be set at the project version level:
+
+	- GTWS_PROJECT_VERSION
+		- This is the version of the project.  It's used to pull from
+		  the origin correctly.  In git, this is likely a branch name.
+
+	
+	These things can go anywhere in the tree, and can be overridden
+	multiple times if that makes sense:
+
+	GTWS_PATH_EXTRA
+		- Extra path elements to be added to the path inside the workspace
+	GTWS_FILES_EXTRA
+		- Extra files not under version control that should be copied
+		  into each checkout in the workspace.  This is things like
+		  .git/info/exclude and each file is relative to the base of
+		  it's repo.
+
+
+- Origin dirs
+	GTWS_ORIGIN (in most scripts) points to the pristine git checkouts to
+	pull from and push to.
+
+	- Layout of ${GTWS_ORIGIN}
+		- /<project>
+			- This is the base for repos for a project.
+			- If gtws_project_clone is given, this can have any
+			  layout desired.
+			- If gtws_project_clone is *not* given, this must
+			  contain a subdirectory named "git" that contains a
+			  set of bare git repos to clone.
+			- It can optionally contain a directory named
+			  "submodule" that contains mirrors of all the
+			  submodule repos from the project.
+		- These directories can be created using the "gtws-mirror"
+		  command.  See the examples.
+
+- Workflow
+	Suppose you have a project "Foo" that has a an upstream repository at
+	"github.com/foo/foo.git".  This repo has a submodule named "bar" with
+	an upstream at "github.com/bar/bar.git".  The Foo project does
+	development in the master branch, and uses stable version branches.
+
+	The first thing you need to do to use gtws with foo is to set up the
+	directory structure.  These examples all assume you are using the
+	default directory structure.
+
+	- Set up your top level .gtwsrc:
+		cp ${GTWS_LOC}/examples/gtwsrc.top ~/.gtwsrc
+		- Edit ~/.gtwsrc and change as necessary
+	- Create top level directories:
+		mkdir -p ~/origin ~/src
+	- Create and setup the project directory:
+		mkdir -p ~/src/foo
+		cp ${GTWS_LOC}/examples/gtwsrc.project ~/src/foo/.gtwsrc
+		- Edit ~/src/foo/.gtwsrc and change as necessary
+	- Create and setup the master version directory:
+		mkdir -p ~/src/foo/master
+		cp ${GTWS_LOC}/examples/gtwsrc.version ~/src/foo/master/.gtwsrc
+		- Edit ~/src/foo/master/.gtwsrc and change as necessary
+	- Go to the version directory, and create a temporary workspace to set
+	  up the mirrors:
+		mkdir -p ~/src/foo/master/tmp
+		cd ~/src/foo/master/tmp
+		git clone --recurse-submodules git://github.com/foo/foo.git
+		cd foo
+		gtws-mirror -o ~/origin -p foo
+		- This will create ~/origin/foo/git/foo.git and ~/origin/foo/submodule/bar.git
+		- Future clones will clone from these origins, rather than from upstream.
+		- This "workspace" can be deleted now.
+
+	At this point, work can be done on the master branch of foo.  Suppose
+	you want to fix a bug named "bug1234".  You can create a workspace for
+	this work, to keep it isolated from anything else you're working on,
+	and then work within this workspace.
+
+	- Go to the version directory, and create a new workspace:
+		cd ~/src/foo/master
+		mkws bug1234
+		- This creates bug1234/ and inside it checks out foo (and it's
+		  submodule bar), and makes build/foo for building it.
+	- Enter the workspace.  This can be done two ways:
+		cd ~/src/foo/master/bug1234
+		startws
+		- or
+		cd ~/src/foo/master/
+		startws bug1234
+		- This starts a subshell within the bug1234 workspace.  This
+		  shell has the GTWS environment, plus any environment you set
+		  up in your stacked .gtwsrc files.  It also adds the base of
+		  the workspace to your CD path, so you can cd into relative
+		  paths from that base.
+		- At this point, you can do work on bug1234, build it, test it,
+		  and commit your changes.  When you're ready to push to
+		  upstream, push like this:
+		cd foo
+		wspush
+		- "wspush" will push the branch associated with your workspace
+		  first to your local orgin, and then to the upstream.
+		- If upstream changes. you can sync your local checkout using:
+		git sync
+		- This envokes the "git-sync" script in gtws, which will update
+		  your checkout from the local origin.  To update the local
+		  origin, use:
+		git sync -o
+		- This will update your local origin and submodules mirrors,
+		  then use those to update your checkout.  git-sync has other
+		  nice features.
+		- When your done using the workspace, just exit the shell:
+		exit
+		- You can re-enter the workspace at any time, and have multiple
+		  shells in the same workspace at the same time.
+	- When your done with a workspace, you can remove it using the "rmws"
+	  command, or just remove it's directory tree.
+	- There is a script named "tmws" that enters a workspace within tmux,
+	  creating a set of windows/panes that are fairly specific to my
+	  workflow.  Feel free to modify it to suite your needs.
+	

@@ -1,0 +1,60 @@
+#!/bin/bash
+#
+# Delete project development workspace
+#
+
+VERSION=$(basename "${PWD}")
+PROJECT=$(basename $(dirname "$PWD"));
+
+# Set usage output
+DESCRIPTION="Delete a development workspace"
+USAGE="[-h |--help] <name>"
+LONGUSAGE="\t-h, --help\n\t\tPrint this help message
+\t<name>\n\t\tWorkspace name"
+
+# Standard functions
+GTWS_LOC=$(readlink -f $(dirname "$0"))
+source ${GTWS_LOC}/gtws.sh
+
+# Script name
+ME=$(basename $0)
+
+# Parse arguments
+ARGS=`getopt -o h --long help -n "${ME}" -- "$@"`
+
+if [ $? != 0 ] ; then
+	usage 
+fi
+eval set -- "$ARGS"
+
+while true ; do
+	case "$1" in
+		-h|--help) usage; shift ;;
+		--) shift ; break ;;
+		* ) usage "Invalid argument $1";;
+	esac
+done
+
+# Remaining arguments are in $1, $2, etc. as normal
+if [ -z "${1}" ]; then
+	usage "Must give a workspace name"
+fi
+
+GTWS_WSPATH=$(readlink -f "${1}")
+GTWS_WSNAME=$(basename "${GTWS_WSPATH}")
+
+# Target directory check
+if [ ! -d "${GTWS_WSPATH}" ]; then
+	die "Workspace ${GTWS_WSPATH} doesn't exist"
+fi
+
+# Cleanup
+if [ -n "$(declare -F | grep "gtws_project_cleanup")" ]; then
+	basedir="${PWD}"
+	cd "${GTWS_WSPATH}"
+	gtws_project_cleanup ${GTWS_WSNAME} ${PROJECT} ${VERSION} || die "cleanup failed"
+	cd "${basedir}"
+fi
+
+# Nuke workspace
+rm -rf "${GTWS_WSPATH}"

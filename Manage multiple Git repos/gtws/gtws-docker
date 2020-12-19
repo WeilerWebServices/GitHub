@@ -1,0 +1,317 @@
+#!/bin/bash
+#
+# Start a docker on this workspace
+#
+# Config
+# GTWS_DEFAULT_DOCKER_BASE_IMAGE - System-wide default base docker image.
+# GTWS_DOCKER_BASE_IMAGE - Docker base image to specialize
+# GTWS_DEFAULT_DOCKER_IMAGE - System-wide default docker image.
+# GTWS_DOCKER_IMAGE - Docker image to use for this workspace.
+# GTWS_DOCKER_MOUNTS - Extra directories to mount as space-separated "/outside/path:/inside/path"
+# GTWS_DOCKER_OPTS - Additional options to use to create the container
+#
+
+# Set usage output
+DESCRIPTION="Use docker in a workspace"
+USAGE="[-h |--help] (run | commit | reset)"
+LONGUSAGE="Common options:
+\t-h, --help\n\t\tPrint this help message
+\t-V, --verbose\n\t\tBe verbose
+
+\t Commands:
+\trun\n\t\tRun a shell in docker.  Starts or joins as appropriate.
+\tcommit\n\t\tFreeze the current image, creating a new base image
+\treset\n\t\tReset the current image back to it's base
+
+\tFor more info about each command, pass --help to that command
+"
+# Standard functions
+GTWS_LOC=$(readlink -f $(dirname "$0"))
+source ${GTWS_LOC}/gtws.sh
+GTWS_DOCKER_BASE_IMAGE=${GTWS_DOCKER_BASE_IMAGE:-${GTWS_DEFAULT_DOCKER_BASE_IMAGE:-none}}
+GTWS_DOCKER_IMAGE=${GTWS_DOCKER_IMAGE:-${GTWS_DEFAULT_DOCKER_IMAGE:-none}}
+DOCKER_ENV=".gtwsrc_docker"
+DOCKER_USER="${USER}"
+SESNAME="${GTWS_PROJECT}_${GTWS_PROJECT_VERSION}_${GTWS_WSNAME}"
+FLAVOR="fedora"
+EXRTA_PKGS=
+
+# Script name
+ME=$(basename $0)
+
+# Parse global arguments
+ARGS=`getopt -o +hV --long help,verbose -n "${ME}" -- "$@"`
+
+if [ $? != 0 ] ; then
+	usage "invalid arguments"
+fi
+eval set -- "$ARGS"
+
+while true ; do
+	case "$1" in
+		-h|--help) usage; shift ;;
+		-V|--verbose) export GTWS_VERBOSE=yes; shift ;;
+		--) shift ; break ;;
+		* ) usage "Invalid argument $1" ;;
+	esac
+done
+
+run_opts() {
+	local ME="${ME} ${COMMAND}"
+	local USAGE="[-h |--help] [-b <base-image-name> | --baseimage=<base-image-name>] [-i <image-name> | --image=<image-name>] [-f <image-flavor> | --flavor <image-flavor>] [-p <extra-pkgs> | --packages=<extra-pkgs>] [-u <user> | --user=<user>] [<extra-mount-dir> [<extra-mount-dir...]]"
+	local LONGUSAGE="\t-h, --help\n\t\tPrint this help message
+\t-b <base-image-name>, --baseimage=<base-image-name>\n\t\tDocker base image to specialize (default: ${GTWS_DOCKER_BASE_IMAGE})
+\t-i <image-name>, --image=<image-name>\n\t\tDocker image to start (default: ${GTWS_DOCKER_IMAGE})
+\t-f <image-flavor>, --flavor=<image-flavor>\n\t\tFlavor of image (default $FLAVOR)
+\t-p <extra-pkgs>, --packages=<extra-pkgs>\n\t\tExtra packages to install on initial creation
+\t-u <user>, --user=<user>\n\t\tRun as given user (default: ${DOCKER_USER})
+\t<extra-mount-dir>\n\t\tExtra directory to mount, in the format /outside/path:/inside/path
+
+\tIf an image is given, it will be used to start a container.  If no image is given, but a base-image is given, then that image will be specialized to make an image for this workspace, and that new image will be used to start a container.  That image will continue to be used at long as it exists.
+"
+	local SUBARGS=""
+	SUBARGS=`getopt -o hb:i:f:u: --long help,baseimage:,image:,flavor:,user: -n "${ME}" -- "$@"`
+	if [ $? != 0 ] ; then
+		usage "invalid arguments"
+	fi
+	eval set -- "$SUBARGS"
+
+	while true ; do
+		case "$1" in
+			-h|--help) usage; shift ;;
+			-i|--image) GTWS_DOCKER_IMAGE=$2 ; shift 2 ;;
+			-b|--baseimage) GTWS_DOCKER_BASE_IMAGE=$2 ; shift 2 ;;
+			-f|--flavor) FLAVOR=$2 ; shift 2 ;;
+			-u|--user) DOCKER_USER=$2 ; shift 2 ;;
+			--) shift ; break ;;
+			* ) usage "Invalid argument $1" ;;
+		esac
+	done
+	EXTRA_DIRS="${@}"
+}
+
+commit_opts() {
+	local ME="${ME} ${COMMAND}"
+	local USAGE="[-h |--help] [-f |--force] [-m <commit message> | --message=<commit message>] [<new-image-name>]"
+	local LONGUSAGE="
+Initialize syncing repo.  Must be done once.
+
+\t-h, --help\n\t\tPrint this help message
+\t-f, --force\n\t\tCommit the image, even if it's running
+\t-m <commit message>, --message=<commit message>\n\t\tCommit message for new image.
+\t<new-image-name>\n\t\tName of new image to create. Default: ${USER}/${SESNAME}
+"
+
+	local SUBARGS=""
+	SUBARGS=`getopt -o hfm: --long help,force,message: -n "${ME}" -- "$@"`
+	if [ $? != 0 ] ; then
+		usage "invalid arguments"
+	fi
+	eval set -- "$SUBARGS"
+
+	while true ; do
+		case "$1" in
+			-h|--help) usage; shift ;;
+			-f|--force) FORCE="--force"; shift ;;
+			-m|--message) COMMIT_MSG=$2; shift 2 ;;
+			--) shift ; break ;;
+			* ) usage "Invalid argument $1" ;;
+		esac
+	done
+	NEW_IMAGE_NAME="${SESNAME}"
+	if [ -n "$1" ]; then
+		NEW_IMAGE_NAME=$1; shift
+	fi
+}
+
+reset_opts() {
+	local ME="${ME} ${COMMAND}"
+	local USAGE="[-h |--help] [-s | --sessionimage]"
+	local LONGUSAGE="
+\t-h, --help\n\t\tPrint this help message
+\t-s, --sessionimage\n\t\tRemove the session image as well as resetting
+"
+	local SUBARGS=""
+	SUBARGS=`getopt -o hs --long help,sessionimage -n "${ME}" -- "$@"`
+	if [ $? != 0 ] ; then
+		usage "invalid arguments"
+	fi
+	eval set -- "$SUBARGS"
+
+	while true ; do
+		case "$1" in
+			-h|--help) usage; shift ;;
+			-s|--sessionimage) SESSIONIMAGE="--sessionimage"; shift ;;
+			--) shift ; break ;;
+			* ) usage "Invalid argument $1" ;;
+		esac
+	done
+}
+
+# Now get the subcommand.  It will be in $1.
+COMMAND=$1; shift
+case "${COMMAND}" in
+	"run") run_opts "$@" ;;
+	"commit") commit_opts "$@" ;;
+	"reset") reset_opts "$@" ;;
+	"") usage "Must give a command" ;;
+	* ) usage "Unknown command ${COMMAND}" ;;
+esac
+
+# Remaining arguments are in $1, $2, etc. as normal
+
+is_gtws || usage "Must be run from inside a workspace"
+
+cmd_exists docker || die "Docker not installed"
+
+if [ "${GTWS_DOCKER_IMAGE}" == "none" ]; then
+	if [ "${GTWS_DOCKER_BASE_IMAGE}" == "none" ]; then
+		usage "Must specify a docker image or base image"
+	fi
+	unset GTWS_DOCKER_IMAGE
+fi
+
+if [ -z "${GTWS_DOCKER_IMAGE}" ]; then
+	# Want a per-ws image
+	GTWS_DOCKER_IMAGE="${USER}/${SESNAME}"
+fi
+
+function create_image {
+	if  docker images | grep -q "\<${GTWS_DOCKER_IMAGE}\>" ; then
+		return 0
+	fi
+
+	echo "Creating image for workspace"
+	local maintainer=$(git config --get user.name)
+	maintainer="${maintainer} <$(git config --get user.email)>"
+	local dockerdir=$(mktemp -d)
+	local dockerfile=
+	gtws_find_dockerfile dockerfile || return 1
+	cp "${dockerfile}" "${dockerdir}/Dockerfile"
+	cp "${HOME}/.scripts/scripts-setup" "${dockerdir}/"
+	cp "${GTWS_LOC}/dockerfiles/entrypoint.sh" "${dockerdir}/"
+
+	local repvars="s#@BASEIMAGE@#${GTWS_DOCKER_BASE_IMAGE}#"
+	repvars="${repvars};s#@PROJECT@#${GTWS_PROJECT}#"
+	repvars="${repvars};s#@VERSION@#${GTWS_PROJECT_VERSION}#"
+	repvars="${repvars};s#@WSNAME@#${GTWS_WSNAME}#"
+	repvars="${repvars};s#@MAINTAINER@#${maintainer}#"
+	repvars="${repvars};s#@EXTRA_PKGS@#${EXTRA_PKGS}#";
+	repvars="${repvars};s#@USER@#$(id -un)#"
+	repvars="${repvars};s#@GROUP@#$(id -gn)#"
+	repvars="${repvars};s#@UID@#$(id -u)#"
+	repvars="${repvars};s#@GID@#$(id -g)#"
+	sed -i "${repvars}" "${dockerdir}/Dockerfile" || die "sed failed" || return 1
+	sudo docker build -t "${GTWS_DOCKER_IMAGE}" "${dockerdir}" || die "docker build failed" || return 1
+	rm -rf "${dockerdir}"
+
+	# Set SELINUX to allow access to mounted dir
+	sudo chcon -Rt svirt_sandbox_file_t "${GTWS_WSPATH}"
+}
+
+function cmd_run {
+	is_docker && usage "Must not be run from inside docker"
+
+	local mounts="-v ${GTWS_WSPATH}:${GTWS_WSPATH}"
+	for i in ${GTWS_DOCKER_MOUNTS}; do
+		mounts="${mounts} -v $i"
+	done
+	for i in ${EXTRA_DIRS}; do
+		mounts="${mounts} -v $i"
+	done
+
+	local docker_cmd=""
+
+	if [ ! -f "${GTWS_WSPATH}/${DOCKER_ENV}" ]; then
+		# Set up saved environment
+		save_env "${GTWS_WSPATH}/${DOCKER_ENV}"
+	fi
+
+	if docker ps | grep -q "\<${SESNAME}\>" ; then
+		echo "Attaching to docker session for ${GTWS_WSNAME}"
+		debug_trace_start
+		docker exec -t -i ${SESNAME} \
+			${GTWS_LOC}/startws \
+			--project=${GTWS_PROJECT} \
+			--version=${GTWS_PROJECT_VERSION}
+		debug_trace_stop
+	elif docker ps -a | grep -q "\<${SESNAME}\>" ; then
+		echo "Starting docker session for ${GTWS_WSNAME}"
+		debug_trace_start
+		docker start -i -a  ${SESNAME}
+		debug_trace_stop
+	else
+		create_image || return 1
+
+		echo "Creating docker session for ${GTWS_WSNAME}"
+		local docopts=$(declare -F | grep '\<gtws_docker_opts\>')
+		if [ -n "${docopts}" ]; then
+			debug_print "Setting docker opts from function"
+			eval $(gtws_docker_opts)
+		fi
+		local docopts=$(declare -F | grep '\<gtws_docker_net\>')
+		if [ -n "${docopts}" ]; then
+			debug_print "Setting docker networking from function"
+			eval $(gtws_docker_net)
+		else
+			local GTWS_DOCKER_NET=(-h "${GTWS_WSNAME}")
+		fi
+		debug_trace_start
+		docker run -t -i -w ${GTWS_WSPATH} \
+			--name ${SESNAME} -u ${DOCKER_USER} ${mounts} \
+			"${GTWS_DOCKER_NET[@]}" \
+			"${GTWS_DOCKER_OPTS[@]}" \
+			${GTWS_DOCKER_IMAGE} \
+			${GTWS_LOC}/startws \
+			--project=${GTWS_PROJECT} \
+			--version=${GTWS_PROJECT_VERSION}
+		debug_trace_stop
+	fi
+}
+
+function cmd_commit {
+	is_docker && usage "Must not be run from inside docker"
+
+	local sesid=$(docker ps -a | grep "\<${SESNAME}\>" | awk '{print $1}')
+
+	if [ -z "${sesid}" ]; then
+		die "No session exists for this workspace" || return 1
+	fi
+	if docker ps | grep -q "\<${SESNAME}\>" ; then
+		if [ -z "${FORCE}" ]; then
+			die "Session is running. Exit or use --force" || return 1
+		fi
+	fi
+
+	if [ -z "${COMMIT_MSG}" ]; then
+		COMMIT_MSG="New image ${NEW_IMAGE_NAME}"
+	fi
+
+	echo "Committing current image to ${DOCKER_USER}/${NEW_IMAGE_NAME}"
+	debug_print docker commit -m \"${COMMIT_MSG}\" "${sesid}" "${DOCKER_USER}/${NEW_IMAGE_NAME}"
+	docker commit -m "${COMMIT_MSG}" "${sesid}" "${DOCKER_USER}/${NEW_IMAGE_NAME}"
+}
+
+function cmd_reset {
+	is_docker && usage "Must not be run from inside docker"
+
+	echo "Resetting current image to default"
+	docker rm -f "${SESNAME}"
+	rm -f "${GTWS_WSPATH}/${DOCKER_ENV}"
+
+	if [ -n "${SESSIONIMAGE}" ]; then
+		if docker images | grep -q "\<${SESNAME}\>" ; then
+			debug_print docker rmi "${USER}/${SESNAME}"
+			docker rmi "${USER}/${SESNAME}"
+		fi
+	fi
+}
+
+# Run command
+case "${COMMAND}" in
+	"run") cmd_run ;;
+	"commit") cmd_commit ;;
+	"reset") cmd_reset ;;
+	* ) usage "Unknown command ${COMMAND}" ;;
+esac
+

@@ -1,0 +1,100 @@
+#!/bin/bash
+#
+# Run a program under ASAN
+#
+
+# Standard functions
+GTWS_LOC=$(readlink -f $(dirname "$0"))
+source ${GTWS_LOC}/gtws.sh
+GDB="cgdb"
+
+# asan_version asanver || die "no asan"
+#
+# Find out which version of libasan is installed
+#
+# Result will be in the local variable asanver
+function asan_version {
+	local __resultvar=$1
+	local libasan=$(/bin/ls /usr/lib64/libasan.so.?)
+
+	if [ ! -f "${libasan}" ]; then
+		die "No libasan" || return 1
+	fi
+
+	local __base=$(basename "${libasan}")
+	local __ver="${__base##*.}"
+
+	if [[ "$__resultvar" ]]; then
+		eval $__resultvar="'$__ver'"
+	else
+		echo ${__ver}
+	fi
+}
+
+# Set usage output
+DESCRIPTION="Run a workspace program under ASAN"
+USAGE="[-h |--help] [-d | --debug] [-v | --valgrind] [-m | --massif] [-p <preload> | --preload=<preload>] [-g | --gdb] <program> [arguments]"
+LONGUSAGE="\t-h, --help\n\t\tPrint this help message
+\t-p <preload>, --preload=<preload>\n\t\tLibrary to preload. Default: none
+\t-d, --debug\n\t\tRun under debugger
+\t-g, --gdb\n\t\tUse gdb instead of cgdb
+\t-v, --valgrind\n\t\tUse valgrind rather than ASAN
+\t-m, --massif\n\t\tUse massif rather than ASAN
+\t-V, --verbose\n\t\tBe verbose
+\t<program>\n\t\tProgram to run
+\t[arguments]\n\t\tArguments to program"
+
+# Script name
+ME=$(basename $0)
+
+# Parse arguments
+ARGS=`getopt -o dghmp:vV --long help,debug,gdb,massif,preload:,valgrind,verbose -n "${ME}" -- "$@"`
+
+if [ $? != 0 ] ; then
+	usage 
+fi
+eval set -- "$ARGS"
+
+while true ; do
+	case "$1" in
+		-h|--help) usage; shift ;;
+		-d|--debug) export DEBUG=yes; shift ;;
+		-g|--gdb) GDB=gdb; shift ;;
+		-m|--massif) export MASSIF=yes; shift ;;
+		-p|--preload) PRELOAD=$2 ; shift 2 ;;
+		-v|--valgrind) export VALGRIND=yes; shift ;;
+		-V|--verbose) export GTWS_VERBOSE=yes; shift ;;
+		--) shift ; break ;;
+		* ) usage "Invalid argument $1";;
+	esac
+done
+
+is_gtws || usage "Must be run inside a workspace"
+
+# Remaining arguments are in $1, $2, etc. as normal
+if [ -z "${1}" ]; then
+	usage "Must give a program"
+fi
+PROG="${1}"
+shift
+
+if [ -n "${VALGRIND}" ] && [ -n "${MASSIF}" ]; then
+	usage "Cannot give both --valgrind and --massif"
+fi
+
+asan_version ASANVER || die "No libasan"
+
+if [ -n "${VALGRIND}" ]; then
+	LD_PRELOAD="${PRELOAD}" valgrind --leak-check=full --max-stackframe=3280592 ${PROG} "${@}"
+elif [ -n "${MASSIF}" ]; then
+	LD_PRELOAD="${PRELOAD}" valgrind --tool=massif --max-stackframe=3280592 ${PROG} "${@}"
+elif [ -n "${DEBUG}" ]; then
+	cmdbase=$(basename ${PROG});
+	pid=$(pgrep "${cmdbase}");
+	ASAN_OPTIONS="abort_on_error=1" ${GDB} -ex "set environment LD_PRELOAD=libasan.so.${ASANVER}:${PRELOAD}" ${PROG} ${pid}
+else
+	LD_PRELOAD="libasan.so.${ASANVER}:${PRELOAD}" ${PROG} "${@}"
+fi
+
+
+echo "Done"

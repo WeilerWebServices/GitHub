@@ -1,0 +1,192 @@
+#!/bin/bash
+#
+# Script that syncs a branch of a repo tracking a remote repo.
+# Checks first to make sure there's no uncommited changes on the local branch,
+# and fails.
+# Basically, this means:
+#   git checkout master
+#   git pull
+#   git checkout <original branch>
+#   git pull master
+#
+
+SUBREMOTE=""
+
+# Set usage output
+DESCRIPTION="Sync a git repo with it's tracking branch and remote repo"
+USAGE="[-h |--help] [-V | --verbose] [-f | --force] [-s | --stash] [-o | --origin] [-r | --remote] [-t | --tags]"
+LONGUSAGE="\t-h, --help\n\t\tPrint this help message
+\t-V, --verbose\n\t\tPrint verbose debugging info
+\t-f, --force\n\t\tSync even if the local branch is not up-to-date
+\t-s, --stash\n\t\tStash before syncing, and pop after
+\t-o, --origin\n\t\tIf in a workspace, update origin insted of local
+\t-r, --remote\n\t\tUpdate submodules to the most recent version
+\t-t, --tags\n\t\tUpdate the tags after syncing"
+
+# Standard functions
+GTWS_LOC=$(readlink -f $(dirname "$0"))
+source ${GTWS_LOC}/gtws.sh
+
+# Script name
+ME=$(basename $0)
+
+# Parse arguments
+ARGS=`getopt -o hVfsort --long help,verbose,force,stash,origin,remote,tags -n "${ME}" -- "$@"`
+
+if [ $? != 0 ] ; then
+	usage 
+fi
+eval set -- "$ARGS"
+
+while true ; do
+	case "$1" in
+		-h|--help) usage; shift ;;
+		-V|--verbose) GTWS_VERBOSE="yes"; shift ;;
+		-f|--force) FORCE="yes"; shift ;;
+		-s|--stash) STASH="yes"; shift ;;
+		-o|--origin) ORIGIN="yes"; shift ;;
+		-r|--remote) SUBREMOTE="--remote"; shift ;;
+		-t|--tags) TAGS="yes"; shift ;;
+		--) shift ; break ;;
+		* ) usage "Invalid argument $1";;
+	esac
+done
+
+# Remaining arguments are in $1, $2, etc. as normal
+
+# Source the git environment.  Checks to see if we're in a git repo
+SUBDIRECTORY_OK=Yes
+source "$(git --exec-path)/git-sh-setup"
+# Re-source my script to replace git's version of functions
+source ${GTWS_LOC}/gtws.sh
+
+# update_repo ${repo_path} ${stash}
+function update_repo {
+	local repodir=$1
+	local stash=$2
+	local savedir=${PWD}
+	local branch=$(git branch | grep "\*" | sed 's/\* //')
+	local remote=$(git config --get branch.${branch}.remote)
+	local bare=
+	local upstream=
+
+	GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
+
+	is_git_rebase && die "Rebase in progress"
+
+	if git-issvn > /dev/null 2>&1; then
+		local svn="yes"
+	fi
+
+	cd "${repodir}"
+
+	if test "z$(is_bare_repository)" == ztrue; then
+		bare="true"
+	fi
+	if [ -n "${bare}" ]; then
+		upstream=
+	elif [ -z "${remote}" ]; then
+		upstream="master"
+	elif [ "${remote}" == "." ]; then
+		# Local tracking branch.  Use it instead of master
+		m=$(git config --get branch.${branch}.merge)
+		upstream=${m##*/}
+	elif [ "${remote}" == "origin" ]; then
+		# This branch directly tracks upstream; don't do any form of
+		# local upstream
+		upstream=
+	fi
+
+	if [ -n "${stash}" ]; then
+		git stash || die "Couldn't stash" || return 1
+	fi
+
+	if [ -z "${bare}" -a -z "${FORCE}" ]; then
+		git status | grep clean > /dev/null || \
+			die "Current branch is not clean" || return 1
+	fi
+
+	if [ -n "${upstream}" ]; then
+		echo "Updating ${upstream} first..."
+		git checkout ${upstream} || \
+			die "Could not checkout ${upstream}" || return 1
+		if [ -n "${svn}" ]; then
+			git svn rebase || die "rebase of ${upstream} failed" || return 1
+		else
+			git pull --rebase || \
+				die "rebase of ${upstream} failed" || return 1
+			git submodule update --init --recursive ${SUBREMOTE} || \
+				die "submodule update of ${upstream} failed" || return 1
+		fi
+		git checkout ${branch}
+	fi
+
+	if [ -n "${bare}" ]; then
+		debug_print "Updating bare"
+		git fetch --all --prune || die "update of bare repo failed" || return 1
+	elif [ -n "${svn}" ]; then
+		debug_print "Updating svn ${branch}"
+		git svn rebase || die "rebase of ${branch} failed" || return 1
+	else
+		debug_print "Updating git ${branch}"
+		git pull --rebase || die "rebase of ${branch} failed" || return 1
+		git submodule update --init --recursive ${SUBREMOTE} || \
+			die "submodule update of ${branch} failed" || return 1
+	fi
+
+	if [ -n "${stash}" ]; then
+		git stash pop
+	fi
+
+	cd "${savedir}"
+}
+
+branch=$(git branch | grep "\*" | sed 's/\* //' | grep detached)
+if [ -n "${branch}" ]; then
+	die "Checkout is on detached HEAD.  Please pick a branch"
+fi
+
+function sm_update {
+	local smopv="${1}"
+	local subpaths=$(gtws_submodule_paths)
+
+	debug_print "${FUNCNAME} updating ${smopv}"
+	for sub in ${subpaths}; do
+		MIRROR=$(gtws_submodule_mirror ${smopv} ${sub})
+		debug_print "${sub}: ${MIRROR}"
+		if [ -d "${MIRROR}" ]; then
+			echo ""
+			echo "Updating submodule mirror $MIRROR"
+			update_repo "${MIRROR}" || die
+			local sub_base==${sub%.git}
+			if [ -d "${smopv}/${sub_base}_submodule" ]; then
+				sm_update "${smopv}/${sub_base}_submodule"
+			fi
+		fi
+	done
+}
+
+if [ -n "${ORIGIN}" ]; then
+	is_gtws || usage "--origin may only be given inside a workspace"
+
+	OPV=$(gtws_opvn "${GTWS_ORIGIN}" "${GTWS_PROJECT}" "${GTWS_PROJECT_VERSION}" "${GTWS_WSNAME}")
+	# First update upstream
+	git_top_dir GITDIR || die "Failed to get top dir"
+	TARGET=$(basename $GITDIR)
+	gtws_get_origin "${OPV}" "${TARGET}" OREPO || die "failed to get origin"
+	echo ""
+	echo "Updating origin $OREPO"
+	update_repo "${OREPO}"
+
+	SMOPV=$(gtws_smopvn "${GTWS_ORIGIN}" "${GTWS_PROJECT}" "${GTWS_PROJECT_VERSION}" "${GTWS_WSNAME}")
+	sm_update ${SMOPV}
+fi
+
+# Update local repo
+echo ""
+echo "Updating checkout";
+update_repo "." ${STASH} || die
+
+if [ -n "${TAGS}" -a -f ".maketagssave" ]; then
+	maketags -r
+fi

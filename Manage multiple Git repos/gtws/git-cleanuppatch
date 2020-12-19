@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# Copyright (c) 2012 Daniel Gryniewicz
+#
+# Clean up crutf left over from patching a git repo
+
+# Set usage output
+DESCRIPTION="Clean up cruft left over from patching a git repo"
+USAGE="[-h |--help]"
+LONGUSAGE="\t-h, --help\n\t\tPrint this help message"
+
+# Standard functions
+GTWS_LOC=$(readlink -f $(dirname "$0"))
+source ${GTWS_LOC}/gtws.sh
+
+# Script name
+ME=$(basename $0)
+
+# Parse arguments
+ARGS=`getopt -o h --long help -n "${ME}" -- "$@"`
+
+if [ $? != 0 ] ; then
+	usage 
+fi
+eval set -- "$ARGS"
+
+while true ; do
+	case "$1" in
+		-h|--help) usage; shift ;;
+		--) shift ; break ;;
+		* ) usage "Invalid argument $1";;
+	esac
+done
+
+# Remaining arguments are in $1, $2, etc. as normal
+
+SUBDIRECTORY_OK=Yes
+OPTIONS_SPEC=
+LONG_USAGE="${LONGUSAGE}"
+# Source the git environment
+source "$(git --exec-path)/git-sh-setup"
+
+PREFIX=$(git rev-parse --show-prefix)
+
+SEDC='s#?? ##'
+if [ -n "${PREFIX}" ]; then
+	SEDC="${SEDC};s#${PREFIX}##"
+fi
+
+git status --porcelain | grep '^??' | grep ".orig" | sed "${SEDC}" | xargs rm -r 2>/dev/null
+git status --porcelain | grep '^??' | grep ".rej" | sed "${SEDC}" | xargs rm -r 2>/dev/null

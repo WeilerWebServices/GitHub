@@ -1,0 +1,148 @@
+#!/bin/bash
+#
+# Mirror a repo's uptsream into origin
+#
+
+#function GTWScleanup {
+#}
+
+# Standard functions
+GTWS_LOC=$(readlink -f $(dirname "$0"))
+source ${GTWS_LOC}/gtws.sh
+
+ORIGIN="none"
+PROJECT=""
+SUBMODULE_BASE=
+
+if is_gtws; then
+	REPO_BASE=$(gtws_opvn "${GTWS_ORIGIN}" "${GTWS_PROJECT}" "${GTWS_PROJECT_VERSION}" "${GTWS_WSNAME}")
+	ORIGIN="${GTWS_ORIGIN}"
+	PROJECT="${GTWS_PROJECT}"
+	SUBMODULE_BASE=$(gtws_smopvn "${GTWS_SUBMODULE_ORIGIN:-${GTWS_ORIGIN}}" "${GTWS_PROJECT}" "${GTWS_PROJECT_VERSION}" "${GTWS_WSNAME}" 2>/dev/null)
+	if [ -z "${SUBMODULE_BASE}" ]; then
+		SUBMODULE_BASE="${GTWS_SUBMODULE_ORIGIN:-${GTWS_ORIGIN}}/${PROJECT}/submodule"
+	fi
+fi
+
+# Set usage output
+DESCRIPTION="Mirror a repo's upstream into origin"
+USAGE="[-h |--help] [-o <origin> | --origin=<origin>] [-p <project> | --project=<project>] [-s <submodule-base> | --submodule-base=<submodule-base>] [-S | --submodule] [-V | --verbose]"
+LONGUSAGE="\t-h, --help\n\t\tPrint this help message
+\t-o <origin>, --origin=<origin>\n\t\tOrigin location (default: ${ORIGIN})
+\t-p <project>, --project=<project>\n\t\tProject subdir in origin (default: ${PROJECT:-none})
+\t-s <submodule-base>, --submodule-base=<submodule-base>\n\t\tBase dir for submodules (default: ${SUBMODULE_BASE:-none})
+\t-S, --submodule\n\t\tOnly mirror submodules (adding any new ones)
+\t-V, --verbose\n\t\tBe verbose"
+
+# Script name
+ME=$(basename $0)
+
+# Parse arguments
+ARGS=`getopt -o hVs:So:p: --long help,verbose,submodule,submodule-base:,origin:,project: -n "${ME}" -- "$@"`
+
+if [ $? != 0 ] ; then
+	usage
+fi
+eval set -- "$ARGS"
+
+while true ; do
+	case "$1" in
+		-h|--help) usage; shift ;;
+		-o|--origin) ORIGIN=$2 ; shift 2 ;;
+		-p|--project) PROJECT=$2 ; shift 2 ;;
+		-s|--submodule-base) SUBMODULE_BASE=$2 ; shift 2 ;;
+		-S|--submodule) export ONLY_SUBMODULES=yes; shift ;;
+		-V|--verbose) export GTWS_VERBOSE=yes; shift ;;
+		--) shift ; break ;;
+		* ) usage "Invalid argument $1";;
+	esac
+done
+
+# Remaining arguments are in $1, $2, etc. as normal
+if [ ! -d "${ORIGIN}" ]; then
+	usage "origin ${ORIGIN} is not a directory"
+fi
+if [ -z "${SUBMODULE_BASE}" ]; then
+	usage "Must give a submodule base"
+fi
+is_git_repo "${PWD}" || usage "Must be run from within a git repo"
+
+UPSTREAM=$(git config --get remote.origin.url)
+if [ -z "${ONLY_SUBMODULES}" ]; then
+	if [ -d "${UPSTREAM}" ]; then
+		die "upstream is already a local mirror: ${UPSTREAM}"
+	fi
+fi
+
+# Set up origin layout
+if [ ! -d "${ORIGIN}/${PROJECT}" ]; then
+	mkdir -p "${ORIGIN}/${PROJECT}" || die "failed to make project dir ${ORIGIN}/${PROJECT}"
+fi
+if [ ! -d "${ORIGIN}/${PROJECT}/git" ]; then
+	mkdir -p "${ORIGIN}/${PROJECT}/git" || die "failed to make git dir ${ORIGIN}/${PROJECT}/git"
+fi
+if [ ! -d "${SUBMODULE_BASE}" ]; then
+	mkdir -p "${SUBMODULE_BASE}" || die "failed to make submodule dir ${SUBMODULE_BASE}"
+fi
+
+git_top_dir REPODIR || die "Could not get top git dir for PWD";
+
+if [ -z "${ONLY_SUBMODULES}" ]; then
+	# Clone mirror
+	cd "${ORIGIN}/${PROJECT}/git" || die "failed to cd to git dir"
+	git clone --mirror "${UPSTREAM}" || die "Failed to clone main mirror"
+fi
+
+function sm_fetch_mirror {
+	local sub=${1}
+	local smbase=${2}
+	local rpath="${PWD}"
+	local url=$(gtws_submodule_url ${sub})
+	local sub_base=$(basename ${sub})
+	debug_print "url: $url"
+	if [ -z "${url}" ]; then
+		return
+	fi
+
+	local urlbase=$(basename ${url})
+	debug_print "urlbase: $urlbase"
+
+	if [ ! -d "${smbase}" ]; then
+		mkdir "${smbase}"
+	fi
+
+	if [ ! -d "${smbase}/${urlbase}" ]; then
+		cd "${smbase}" || die "failed to cd to submodule dir"
+		git clone --mirror "${url}" || die "Failed to clone submodule mirror ${urlbase}"
+		if [ ! -d "${urlbase}" ]; then
+			if [ -d "${urlbase}.git" ]; then
+				mv "${urlbase}.git" "${urlbase}"
+			fi
+		fi
+		if [ ! -d "${urlbase}" ]; then
+			die "Mirror for submodule in wrong location. Expected ${urlbase}"
+		fi
+	fi
+
+	# Try for sub-sub modules
+	sm_mirror "${rpath}/${sub}" "${smbase}/${sub_base}_submodule"
+
+	cd "${rpath}"
+}
+
+# Mirror submodules
+function sm_mirror {
+	local repodir=${1}
+	local smbase=${2}
+
+	debug_print "${FUNCNAME} trying ${repodir} ${smbase}"
+	cd "${repodir}"
+	local subpaths=$(gtws_submodule_paths)
+	for sub in ${subpaths}; do
+		sm_fetch_mirror ${sub} ${smbase}
+	done
+}
+
+sm_mirror "${REPODIR}" "${SUBMODULE_BASE}"
+
+echo "Done"
