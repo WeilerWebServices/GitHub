@@ -1,0 +1,17 @@
+# pack-refs with: peeled fully-peeled sorted 
+15aab26490facf285acef56cb5d61025eacb3a69 refs/remotes/origin/develop
+9283eaef814806efe98cec9f8ef11ed47d6a4cd5 refs/remotes/origin/feature/implement-hooks
+9975a123095a6074668b2a00d1ce99016002fc4d refs/remotes/origin/gh-pages
+1ffb6b1091f05466d3cd27f2da9c532a38586ed5 refs/remotes/origin/master
+9d5d2f42c94d923660ce61d7daa7106ee02ffab2 refs/tags/0.1
+^2a40e6abadbb83bd2ff634f2711b5366a0860b03
+09fb6865e64d342b10de2992862a466092ad2a5a refs/tags/0.2
+^b554186c4c171659fd7bc64367a5848dff288c3d
+5324ecf7cfc78cad2e5bb0580c12a51e8b775695 refs/tags/0.2.1
+^f8ea3ebae267ab821e5a06ba567fe5d8dc9e942d
+56677315c7f83c648593f32850a8dd29468c6a14 refs/tags/0.3
+^298514b63417725ca5bb639dafe434d69c7ac4b8
+7cb6151a505eebcefaebcdc41ffd5fdf144ad378 refs/tags/0.4
+^dc5d08dfad1ae4cc6a7d5baf0883881bb967a1c2
+5b26edc49c8fee8894121f6f110a9f0c7ad99eb6 refs/tags/0.4.1
+^1ffb6b1091f05466d3cd27f2da9c532a38586ed5
