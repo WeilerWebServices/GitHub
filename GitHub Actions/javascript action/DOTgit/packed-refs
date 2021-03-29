@@ -1,9 +1,0 @@
-# pack-refs with: peeled fully-peeled sorted 
-4b06cbd61f18e636f9d95cea293c33a312aad73e refs/remotes/origin/add_dependabot
-32a7a19d2f358170f1b7e0684149cc3a36b67196 refs/remotes/origin/add_fixes
-55a714aefc71fd14d7dd56ebbd5a113edf86db5f refs/remotes/origin/dependabot/npm_and_yarn/eslint-7.15.0
-33e4c34ebffce705c8ab4e5fe1d001f26b6effe1 refs/remotes/origin/main
-d57bfae3445d913c66dd37a922b205163ffbc43f refs/remotes/origin/master
-4be183afbd08ddadedcf09f17e8e112326894107 refs/tags/v1
-41775a4da8ffae865553a738ab8ac1cd5a3c0044 refs/tags/v1.0.0
-4be183afbd08ddadedcf09f17e8e112326894107 refs/tags/v1.0.1
